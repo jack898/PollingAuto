@@ -2,7 +2,7 @@ name: Run Ticket Scraper
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 minutes
+    - cron: "*/15 * * * *"   # every 10 minutes
   workflow_dispatch:
 
 permissions:
