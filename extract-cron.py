@@ -32,7 +32,7 @@ COOKIES = {
 }
 
 # Starting VID (used only if last_vid.txt is missing)
-START_VID = 831394104
+START_VID = 831394098
 
 # How many VIDs to scan per GitHub Action run
 CHUNK_SIZE = 1000
@@ -239,3 +239,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
