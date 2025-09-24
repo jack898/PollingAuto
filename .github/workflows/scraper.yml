@@ -32,7 +32,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add filtered_boston_tickets.csv last_vid.txt pass_count.txt gap_count.txt
+          git add filtered_boston_tickets.csv last_vid.txt pass_count.txt gap_count.txt seen_vids.txt
           git commit -m "Update tickets data [skip ci]" || echo "No changes"
           git pull --rebase origin main   # sync with remote in case of drift
           git push origin main
