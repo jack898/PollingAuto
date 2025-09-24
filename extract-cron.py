@@ -3,12 +3,12 @@
 Boston parking ticket scraper.
 
 Features:
-- Scans in CHUNK_SIZE slices.
-- Repeats scanning the same range PASS_LIMIT times
-  (to catch tickets that appear a little later).
-- After PASS_LIMIT passes, advance start VID to the
-  highest valid VID found so far.
-- Persists state across runs in last_vid.txt and pass_count.txt.
+- Scans CHUNK_SIZE VIDs per run (default 1000).
+- Repeats each range PASS_LIMIT times (default 3).
+- After PASS_LIMIT passes, advances start VID to the
+  largest valid VID found, or just continues forward if none.
+- Persists state across runs (last_vid, pass_count, consecutive_gaps).
+- Treats both HTTP 404 and empty data[] as gaps.
 """
 
 import requests
@@ -33,11 +33,12 @@ COOKIES = {}
 # State files
 STATE_FILE = "last_vid.txt"
 PASS_FILE = "pass_count.txt"
+GAP_FILE = "gap_count.txt"
 
 # Parameters
-START_VID = 831394104 # Start VID at 9/24/25 1pm
+START_VID = 831394104
 CHUNK_SIZE = 1000
-PASS_LIMIT = 3       # how many times to rescan same range
+PASS_LIMIT = 3
 GAP_THRESHOLD = 10000
 MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
@@ -60,29 +61,35 @@ MAX_BACKOFF_MULT = 6
 
 
 # ---- State helpers ----
-def load_last_vid():
-    if os.path.exists(STATE_FILE):
+def load_int(path, default=0):
+    if os.path.exists(path):
         try:
-            return int(open(STATE_FILE).read().strip())
+            return int(open(path).read().strip())
         except Exception:
-            return START_VID
-    return START_VID
+            return default
+    return default
+
+def save_int(path, val):
+    with open(path, "w") as f:
+        f.write(str(val))
+
+def load_last_vid():
+    return load_int(STATE_FILE, START_VID)
 
 def save_last_vid(vid):
-    with open(STATE_FILE, "w") as f:
-        f.write(str(vid))
+    save_int(STATE_FILE, vid)
 
 def load_pass_count():
-    if os.path.exists(PASS_FILE):
-        try:
-            return int(open(PASS_FILE).read().strip())
-        except Exception:
-            return 0
-    return 0
+    return load_int(PASS_FILE, 0)
 
 def save_pass_count(count):
-    with open(PASS_FILE, "w") as f:
-        f.write(str(count))
+    save_int(PASS_FILE, count)
+
+def load_gap_count():
+    return load_int(GAP_FILE, 0)
+
+def save_gap_count(count):
+    save_int(GAP_FILE, count)
 
 
 # ---- HTTP ----
@@ -159,14 +166,14 @@ def write_rows(rows):
 def main():
     current_vid = load_last_vid()
     pass_count = load_pass_count()
+    consecutive_gaps = load_gap_count()
     end_vid = current_vid + CHUNK_SIZE
 
     collected = []
     largest_valid_vid = None
-    consecutive_gaps = 0
     restart_count = 0
 
-    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} → {end_vid-1}")
+    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} → {end_vid-1}, starting gaps={consecutive_gaps}")
 
     while current_vid < end_vid:
         status, payload = fetch_search(current_vid)
@@ -175,8 +182,10 @@ def main():
             data = payload.get("data") if isinstance(payload, dict) else None
             if not data:
                 consecutive_gaps += 1
+                save_gap_count(consecutive_gaps)
             else:
                 consecutive_gaps = 0
+                save_gap_count(0)
                 top = data[0]
                 if passes_filters(top):
                     row = extract_row(current_vid, top)
@@ -188,6 +197,7 @@ def main():
 
         elif status == "404":
             consecutive_gaps += 1
+            save_gap_count(consecutive_gaps)
             polite_sleep()
             current_vid += 1
 
@@ -203,8 +213,9 @@ def main():
         if consecutive_gaps >= GAP_THRESHOLD:
             restart_count += 1
             print(f"[!] Hit {GAP_THRESHOLD} gaps, restarting from {START_VID}")
-            current_vid = START_VID
             consecutive_gaps = 0
+            save_gap_count(0)
+            current_vid = START_VID
             if MAX_RESTARTS and restart_count >= MAX_RESTARTS:
                 break
 
@@ -222,15 +233,16 @@ def main():
             save_last_vid(largest_valid_vid)
             print(f"Advancing start to {largest_valid_vid}")
         else:
-            # no valid found, just continue from where we left off
             save_last_vid(current_vid)
+            print(f"No valid tickets, advancing to {current_vid}")
         save_pass_count(0)
     else:
-        # same range again
+        # repeat same range
         save_last_vid(load_last_vid())
         save_pass_count(pass_count)
 
-    print("Done.")
+    print(f"Done. consecutive_gaps={consecutive_gaps}, next start={load_last_vid()}, next pass={load_pass_count()}")
+
 
 if __name__ == "__main__":
     main()
