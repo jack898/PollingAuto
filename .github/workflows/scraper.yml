@@ -13,7 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
+        with:
+          fetch-depth: 0    # get full history so we can push
+          ref: main         # check out the main branch directly
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -31,4 +34,5 @@ jobs:
           git config user.email "actions@github.com"
           git add filtered_boston_tickets.csv last_vid.txt
           git commit -m "Update tickets data [skip ci]" || echo "No changes"
-          git push
+          git pull --rebase origin main   # sync with remote in case of drift
+          git push origin main
