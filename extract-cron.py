@@ -7,8 +7,9 @@ Features:
 - Repeats each range PASS_LIMIT times (default 3).
 - After PASS_LIMIT passes, advances start VID to the
   largest valid VID found, or just continues forward if none.
-- Persists state across runs (last_vid, pass_count, consecutive_gaps).
+- Persists state across runs (last_vid, pass_count, consecutive_gaps, seen_vids).
 - Treats both HTTP 404 and empty data[] as gaps.
+- Prevents duplicate rows in CSV using seen_vids.txt.
 """
 
 import requests
@@ -34,6 +35,7 @@ COOKIES = {}
 STATE_FILE = "last_vid.txt"
 PASS_FILE = "pass_count.txt"
 GAP_FILE = "gap_count.txt"
+SEEN_FILE = "seen_vids.txt"
 
 # Parameters
 START_VID = 831394104
@@ -90,6 +92,17 @@ def load_gap_count():
 
 def save_gap_count(count):
     save_int(GAP_FILE, count)
+
+def load_seen():
+    if not os.path.exists(SEEN_FILE):
+        return set()
+    with open(SEEN_FILE, "r") as f:
+        return set(line.strip() for line in f if line.strip())
+
+def save_seen(seen):
+    with open(SEEN_FILE, "w") as f:
+        for vid in sorted(seen, key=int):
+            f.write(str(vid) + "\n")
 
 
 # ---- HTTP ----
@@ -167,13 +180,14 @@ def main():
     current_vid = load_last_vid()
     pass_count = load_pass_count()
     consecutive_gaps = load_gap_count()
+    seen = load_seen()
     end_vid = current_vid + CHUNK_SIZE
 
     collected = []
     largest_valid_vid = None
     restart_count = 0
 
-    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} → {end_vid-1}, starting gaps={consecutive_gaps}")
+    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} → {end_vid-1}, starting gaps={consecutive_gaps}, seen={len(seen)}")
 
     while current_vid < end_vid:
         status, payload = fetch_search(current_vid)
@@ -187,9 +201,10 @@ def main():
                 consecutive_gaps = 0
                 save_gap_count(0)
                 top = data[0]
-                if passes_filters(top):
+                if passes_filters(top) and str(current_vid) not in seen:
                     row = extract_row(current_vid, top)
                     collected.append(row)
+                    seen.add(str(current_vid))
                     largest_valid_vid = max(largest_valid_vid or current_vid, current_vid)
                     print(f"[KEEP] {current_vid} {row['address']} {row['description']}")
             polite_sleep()
@@ -226,6 +241,8 @@ def main():
     if collected:
         write_rows(collected)
 
+    save_seen(seen)
+
     # Pass management
     pass_count += 1
     if pass_count >= PASS_LIMIT:
@@ -241,7 +258,7 @@ def main():
         save_last_vid(load_last_vid())
         save_pass_count(pass_count)
 
-    print(f"Done. consecutive_gaps={consecutive_gaps}, next start={load_last_vid()}, next pass={load_pass_count()}")
+    print(f"Done. consecutive_gaps={consecutive_gaps}, next start={load_last_vid()}, next pass={load_pass_count()}, seen={len(seen)}")
 
 
 if __name__ == "__main__":
