@@ -129,3 +129,6 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831398288,2025-09-25 04:16:03,"73 G ST, Boston, MA",216906,1CWZ89,334 $60 Resident Permit Only
 831398289,2025-09-25 04:20:49,"104 G ST, Boston, MA",216906,2YGL13,334 $60 Resident Permit Only
 831398490,2025-09-25 04:26:19,"500 E 6TH ST, Boston, MA",216906,1ET2870,334 $60 Resident Permit Only
+831398561,2025-09-24 10:03:48,"55 DALE ST, Boston, MA",216906,2FTD17,323 No Valid / Expired Inspection
+831398562,2025-09-25 03:52:43,"1123 COMMONWEALTH AVE, Boston, MA",216906,1RDD67,322 No Valid/Expired Registration Plate
+831398564,2025-09-25 04:09:41,"opp 1348 WALBRIDGE ST, Boston, MA",216906,1FWH14,333 No Stopping or Standing
