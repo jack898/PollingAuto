@@ -1,0 +1,48 @@
+name: Run Ticket Scraper
+  
+concurrency:
+  group: scraper
+  cancel-in-progress: false
+  
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: write  # allow committing back to repo
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0    # get full history so we can push
+          ref: main         # check out the main branch directly
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run scraper
+        run: python extract-cron.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # Make sure we're on the latest commit
+          git fetch origin main
+          git pull origin main --strategy-option=theirs
+
+          # Stage changes
+          git add filtered_boston_tickets.csv last_vid.txt pass_count.txt gap_count.txt seen_vids.txt
+          git commit -m "Update tickets data [skip ci]" || echo "No changes"
+          git push origin main
+
