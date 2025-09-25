@@ -132,3 +132,7 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831398561,2025-09-24 10:03:48,"55 DALE ST, Boston, MA",216906,2FTD17,323 No Valid / Expired Inspection
 831398562,2025-09-25 03:52:43,"1123 COMMONWEALTH AVE, Boston, MA",216906,1RDD67,322 No Valid/Expired Registration Plate
 831398564,2025-09-25 04:09:41,"opp 1348 WALBRIDGE ST, Boston, MA",216906,1FWH14,333 No Stopping or Standing
+831398553,2025-09-25 04:38:22,"49 BOWDOIN ST, Boston, MA",216906,4SZX74,322 No Valid/Expired Registration Plate
+831398554,2025-09-25 04:38:22,"49 BOWDOIN ST, Boston, MA",216906,4SZX74,322 No Valid/Expired Registration Plate
+831398983,2025-09-25 04:43:58,"44 PRINCE ST, Boston, MA",216906,6MXF20,334 $60 Resident Permit Only
+831398984,2025-09-25 04:52:07,"x 23 SNOW HILL ST, Boston, MA",216906,6WK172,333 No Stopping or Standing
