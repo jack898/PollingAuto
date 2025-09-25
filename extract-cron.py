@@ -51,7 +51,10 @@ KEYWORDS = [
     "meter fee unpaid",
     "no valid",
     "within 20 feet of intersection",
-    "hydrant"
+    "hydrant",
+    "driveway",
+    "sidewalk",
+    "bike or bus lane"
 ]
 
 # ---- Helpers ----
@@ -175,12 +178,12 @@ def main():
     collected = []
     restart_count = 0
     newest_date = last_date
+    count_403 = 0
 
     print(f"Scanning {current_vid} → {end_vid-1}, last_date={last_date_str}, seen={len(seen)}")
 
     while current_vid < end_vid:
         status, payload = fetch_search(current_vid)
-
         if status == "ok":
             data = payload.get("data") if isinstance(payload, dict) else None
             if not data:
@@ -208,9 +211,15 @@ def main():
             wait = 1 + random.random()*2
             print(f"[!] {status} backing off {wait:.1f}s")
             time.sleep(wait)
+            if status == "403":
+                  count_403 += 1
+                  if count_403 >= 5:
+                      print("[!] Received 5 consecutive 403s, ending run early.")
+                      break
             current_vid += 1
 
         else:
+            count_403 = 0
             current_vid += 1
 
         # reset gaps if threshold exceeded
@@ -247,3 +256,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
