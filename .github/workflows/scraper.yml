@@ -1,9 +1,6 @@
 name: Run Ticket Scraper
-
-concurrency:
-  group: scraper
-  cancel-in-progress: false
-
+  
+# update pls run
 on:
   schedule:
     - cron: "*/10 * * * *"   # every 10 minutes
