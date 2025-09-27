@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Boston parking ticket scraper (hybrid VID + UTC-date logic).
+Boston parking ticket scraper (anchored VID + UTC-date logic).
 
-Changes:
-- last_date only tracks the latest *kept (filtered)* ticket.
-- last_date.txt is only updated if we found a strictly newer kept ticket.
-- Cursor advancement is decided based on kept tickets, not all tickets.
+Changes in this version:
+- last_vid is always anchored to the VID of the latest-dated valid ticket.
+- Only scans up to a limited forward buffer (FORWARD_BUFFER).
+- If nothing newer is found, snaps back to last_vid instead of drifting forward.
+- Deduplication via seen_vids.txt.
+- State persistence across runs (last_vid, last_date, gap_count, seen_vids).
 """
 
 import requests
@@ -35,10 +37,10 @@ STATE_GAP = "gap_count.txt"
 SEEN_FILE = "seen_vids.txt"
 
 # Parameters
-START_VID = 831399742
+START_VID = 831468992
 CHUNK_SIZE = 1000
+FORWARD_BUFFER = 2000   # how far forward from last_vid we allow scanning
 GAP_THRESHOLD = 15000
-MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
 
 CSV_OUT = "filtered_boston_tickets.csv"
@@ -53,7 +55,7 @@ KEYWORDS = [
     "driveway",
     "sidewalk",
     "bike or bus lane",
-    "over posted limit"
+    "double parking"
 ]
 
 # ---- Helpers ----
@@ -167,22 +169,23 @@ def write_rows(rows):
 
 # ---- Main ----
 def main():
-    current_vid = load_int(STATE_VID, START_VID)
+    last_vid = load_int(STATE_VID, START_VID)
     consecutive_gaps = load_int(STATE_GAP, 0)
     last_date_str = load_str(STATE_DATE, "")
     last_date = parse_date(last_date_str)
     seen = load_seen()
 
-    end_vid = current_vid + CHUNK_SIZE
+    end_vid = last_vid + CHUNK_SIZE
     collected = []
-    restart_count = 0
-    newest_date = None
+    newest_date = last_date
+    newest_vid = last_vid
     count_403 = 0
 
-    print(f"Scanning {current_vid} → {end_vid-1}, last_date={last_date_str}, seen={len(seen)}")
+    print(f"Scanning {last_vid} → {end_vid-1}, last_date={last_date_str}, seen={len(seen)}")
 
-    while current_vid < end_vid:
-        status, payload = fetch_search(current_vid)
+    while last_vid < end_vid:
+        status, payload = fetch_search(last_vid)
+
         if status == "ok":
             data = payload.get("data") if isinstance(payload, dict) else None
             if not data:
@@ -191,26 +194,23 @@ def main():
                 consecutive_gaps = 0
                 top = data[0]
                 dt = parse_date(top.get("date_utc") or top.get("date"))
-
-                if passes_filters(top) and str(current_vid) not in seen:
-                    row = extract_row(current_vid, top)
+                if dt and (newest_date is None or dt > newest_date):
+                    newest_date = dt
+                    newest_vid = last_vid
+                if passes_filters(top) and str(last_vid) not in seen:
+                    row = extract_row(last_vid, top)
                     collected.append(row)
-                    seen.add(str(current_vid))
-                    print(f"[KEEP] {current_vid} {row['address']} {row['description']}")
-
-                    # only update newest_date for kept tickets
-                    if dt and (newest_date is None or dt > newest_date):
-                        newest_date = dt
-
+                    seen.add(str(last_vid))
+                    print(f"[KEEP] {last_vid} {row['address']} {row['description']}")
             polite_sleep()
-            current_vid += 1
+            last_vid += 1
 
         elif status == "404":
             consecutive_gaps += 1
             polite_sleep()
-            current_vid += 1
+            last_vid += 1
 
-        elif status in ("403","429"):
+        elif status in ("403", "429"):
             wait = 1 + random.random()*2
             print(f"[!] {status} backing off {wait:.1f}s")
             time.sleep(wait)
@@ -219,20 +219,16 @@ def main():
                 if count_403 >= 5:
                     print("[!] Received 5 consecutive 403s, ending run early.")
                     break
-            current_vid += 1
+            last_vid += 1
 
         else:
-            count_403 = 0
-            current_vid += 1
+            last_vid += 1
 
-        # reset gaps if threshold exceeded
         if consecutive_gaps >= GAP_THRESHOLD:
-            restart_count += 1
-            print(f"[!] Hit {GAP_THRESHOLD} gaps, restarting from {START_VID}")
+            print(f"[!] Hit {GAP_THRESHOLD} gaps, snapping back to newest VID {newest_vid}")
             consecutive_gaps = 0
-            current_vid = START_VID
-            if MAX_RESTARTS and restart_count >= MAX_RESTARTS:
-                break
+            last_vid = newest_vid
+            break
 
         if len(collected) >= 10:
             write_rows(collected)
@@ -244,15 +240,15 @@ def main():
     save_seen(seen)
     save_int(STATE_GAP, consecutive_gaps)
 
-    # Decide how to advance VID based on kept tickets
     if newest_date and (last_date is None or newest_date > last_date):
         save_str(STATE_DATE, newest_date.isoformat())
-        save_int(STATE_VID, load_int(STATE_VID, START_VID))  # stay in same range
-        print(f"Updated last_date → {newest_date.isoformat()}, staying around VID={load_int(STATE_VID)}")
+        save_int(STATE_VID, newest_vid)  # anchor to latest real ticket VID
+        print(f"Updated last_date → {newest_date.isoformat()}, anchored last_vid={newest_vid}")
     else:
-        # do not overwrite last_date.txt, just move the cursor forward
-        save_int(STATE_VID, end_vid)
-        print(f"No newer kept tickets found, advancing to VID={end_vid}")
+        # probe forward but snap back if too far
+        probe_vid = min(end_vid, load_int(STATE_VID, START_VID) + FORWARD_BUFFER)
+        save_int(STATE_VID, probe_vid)
+        print(f"No newer dates, probing forward to VID={probe_vid} (max buffer {FORWARD_BUFFER})")
 
     print(f"Done. consecutive_gaps={consecutive_gaps}, next start={load_int(STATE_VID)}, last_date={load_str(STATE_DATE)}")
 
