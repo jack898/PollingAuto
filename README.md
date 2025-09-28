@@ -9,13 +9,15 @@ I quickly found the official [payment portal for tickets](https://bostonma.rmcpa
 The `/searchviolation` endpoint powers searches. It returns a JSON response with a `data` array which is either empty if no tickets exist, or contains every ticket associated with that plate otherwise. Each ticket has a LOT of JSON fields. Some even show up as "userdefX", where there is another JSON field "userdefX_label" defining what it holds! Cool approach.
 For my approach, I needed to focus on identifiers. Each ticket has two main ones--`id` and `violation_number`. When I used other ticket API endpoints like the print option, they used `id`, but search used the `violation_number`.
 
-PUT SEARCH EXAMPLE PICTURE
+![Search Pic](https://github.com/jack898/PollingAuto/blob/main/searchviolationEx.jpg?raw=true)
 
 I tried just iterating `violation_number` directly, but this didn't work. Most numbers had no tickets at all, and when I did find one sometimes the ticket had a higher number but an earlier issue date!
 
 ### New Approach
 Since the violation number didn't work, I tested whether the id parameter was chronological using `/getviolationreceipt` (ticket printing). Ultimately to retrieve the ticket information I'd still need the violation number, but conveniently the generated PDF displayed this value. As I iterated the violationid, though, I noticed something strange--tickets from other cities appeared!
-PUT PICTURES OF OTHER CITY TICKETS
+
+![Other city ticket](https://github.com/jack898/PollingAuto/blob/main/MDticketprint.jpg?raw=true)
+![Other city ticket2](https://github.com/jack898/PollingAuto/blob/main/PAticketprint.jpg?raw=true)
 
 I realized that many cities actually use a city.rmcpay.com portal. RMCPay seems to be a ticket payment system by [Passport Inc](https://www.passportinc.com/), and I guess a lot of cities share the same backend ticket database.
 This was bad news for me: Boston tickets were interspersed with IDs from other cities, creating lots of gaps. Still, the Boston ids looked *roughly* chronological.
@@ -47,11 +49,11 @@ I couldn't have each job take 30+ minutes.
 ### Rollback + smaller scans + date tracking
 A better approach involved a little bit more accounting:
 1. Scan only 1000 tickets on each job (down from 20k), to reduce runtime
-2. Instead of using the starting violation number, we keep track of the latest timestamp (`date_utc`) seen. We revert to THAT violation number if we go 15000 tickets with no findings, and we also start our next job from this number.
+2. Instead of using the starting violation number, we keep track of the largest violation number. We revert to THAT violation number if we go 10000 tickets with no findings, and we also start our next job from this number.
 3. Rescan each range multiple times to find clusters
 4. We track the violation numbers seen to deduplicate before putting tickets in the CSV
 
-I ran this approach for about a week and it stayed "good enough". Admittedly, it sometimes struggled to catch up during early mornings when IDs jumped quickly, but it usually found tickets issued within a few hours, and often many within the past hour during the day.
+I ran this approach for about a week and it stayed "good enough". Admittedly, it sometimes struggles to catch up during off times when IDs jumped quickly, but it usually found tickets issued within a few hours, and often many within the past hour during the day.
 
 ## Website
 I wanted a sleek UI like Riley's, but frontend development is not my strength. This is where AI came in handy! I used Bolt to build the UI and set up edge functions to keep the site updated.
@@ -62,11 +64,12 @@ Building with AI taught me some lessons:
 Still, I concluded that if you have a basic understanding of fundamentals, and access to a strong LLM, you can build pretty impressive projects quickly!
 
 # Results
-I (and Bolt) built an interactive map interface to view Boston parking tickets in near real time. In addition, I have gathered a LOT of data on Boston parking tickets.
+I (and Bolt) built an interactive map interface to view Boston parking tickets in somewhat real time. In addition, I have gathered a LOT of data on Boston parking tickets.
 
-Just a couple random observations I've had so far:
+Just a couple interesting observations I've had so far:
 1. They ticket all night! I assumed "overnight" tickets came from early morning/night patrols, but I saw tickets regularly issued from 1-4am.
-2. "Resident Permit Only" violations dominate, but sidewalk/fire hydrant/driveway blocking violations are pretty common too. Props to the city for protecting pedestrians and emergency infrastructure.
+2. Also contrary to popular belief, they ticket on Sundays! I originally designed the site to not even show Sundays, but I tested it and saw quite a few Expired Inspection/Registration Plate tickets, and even a few "Resident Permit Only" tickets.
+3. Overall, "Resident Permit Only" violations dominate, but sidewalk/fire hydrant/driveway blocking violations are pretty common too.
 
 # Disclaimer
 I am not a lawyer, data scientist, or expert software engineer. There is probably (definitely) a better approach for everything I did, and I encourage anybody to improve upon it.
