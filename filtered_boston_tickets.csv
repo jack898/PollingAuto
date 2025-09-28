@@ -2030,3 +2030,6 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831481172,2025-09-27 18:04:49,"10 SACHEM ST, Boston, MA",216906,73RW47,334 $60 Resident Permit Only
 831481173,2025-09-27 18:08:11,"9 CARMEL ST, Boston, MA",216906,3SHR89,334 $60 Resident Permit Only
 831481174,2025-09-27 18:11:41,"73 DELLE AVE, Boston, MA",216906,4BHE19,334 $60 Resident Permit Only
+831482807,2025-09-28 11:59:19,"377 DORCHESTER ST, Boston, MA",216906,9VW279,323 No Valid / Expired Inspection
+831482808,2025-09-28 12:02:08,"385 DORCHESTER ST, Boston, MA",216906,4VVL45,323 No Valid / Expired Inspection
+831482809,2025-09-28 12:02:08,"385 DORCHESTER ST, Boston, MA",216906,4VVL45,323 No Valid / Expired Inspection
