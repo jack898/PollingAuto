@@ -2246,3 +2246,5 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831491066,2025-09-28 16:08:45,"653 SARATOGA ST, Boston, MA",216906,4XGG62,334 $60 Resident Permit Only
 831491067,2025-09-28 16:16:50,"524 BENNINGTON ST, Boston, MA",216906,3JXN95,333 No Stopping or Standing
 831491069,2025-09-28 16:33:24,"540 SARATOGA ST, Boston, MA",216906,2CEZ67,334 $60 Resident Permit Only
+831491070,2025-09-28 16:48:55,"209 SARATOGA ST, Boston, MA",216906,417L50,323 No Valid / Expired Inspection
+831491071,2025-09-28 16:55:39,"158 SARATOGA ST, Boston, MA",216906,3TTN15,322 No Valid/Expired Registration Plate
