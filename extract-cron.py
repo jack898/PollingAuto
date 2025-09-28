@@ -58,7 +58,8 @@ KEYWORDS = [
     "sidewalk",
     "bike or bus lane",
     "over posted limit",
-    "double parking"
+    "double parking",
+    "No Parking"
 ]
 
 # ---- Helpers ----
@@ -241,4 +242,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
