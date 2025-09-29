@@ -46,7 +46,7 @@ START_VID = 831394104
 CHUNK_SIZE = 1000
 PASS_LIMIT = 3
 GAP_THRESHOLD = 10000
-FORWARD_BUFFER = 4000
+FORWARD_BUFFER = 3000
 MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
 
@@ -288,4 +288,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
