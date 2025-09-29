@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-Boston parking ticket scraper (simplified rollback algorithm).
+Boston parking ticket scraper (hybrid date + valid VID).
 
-Algorithm:
-- Track only the last valid kept VID (last_valid_vid.txt).
-- Scan forward in CHUNK_SIZE increments.
-- If GAP_THRESHOLD consecutive misses, roll back to last_valid_vid.
-- Perform multiple passes over the same range before advancing.
-- Deduplicate using seen_vids.txt.
-- Quit early if 5 consecutive 403s.
+Features:
+- Scans CHUNK_SIZE VIDs per run.
+- Tracks both last_date (latest kept ticket date) and last_valid_vid (most recent kept Boston ticket VID).
+- Repeats each range PASS_LIMIT times before advancing.
+- If gaps exceed GAP_THRESHOLD, rollback to last_valid_vid (preferred) or newest_vid.
+- If tickets found with a newer date, advance cursor; otherwise probe forward cautiously.
+- Persists state across runs (last_vid, last_date, last_valid_vid, pass_count, gap_count, seen_vids).
+- Deduplicates tickets persistently via seen_vids.txt.
+- Quits early if 5 consecutive 403s.
 """
 
 import requests
@@ -16,6 +18,7 @@ import time
 import csv
 import random
 import os
+from datetime import datetime
 
 # ---- Configuration ----
 BASE_HOST = "bostonma.rmcpay.com"
@@ -31,17 +34,19 @@ HEADERS = {
 COOKIES = {}
 
 # State files
-STATE_VID = "last_vid.txt"        # cursor (where to scan next)
-STATE_VALID = "last_valid_vid.txt" # most recent kept ticket
-STATE_GAP = "gap_count.txt"
+STATE_VID = "last_vid.txt"
+STATE_DATE = "last_date.txt"
+STATE_VALID = "last_valid_vid.txt"
 STATE_PASS = "pass_count.txt"
+STATE_GAP = "gap_count.txt"
 SEEN_FILE = "seen_vids.txt"
 
 # Parameters
-START_VID = 831479613
+START_VID = 831394104
 CHUNK_SIZE = 1000
-GAP_THRESHOLD = 10000
 PASS_LIMIT = 3
+GAP_THRESHOLD = 10000
+FORWARD_BUFFER = 5000
 MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
 
@@ -59,7 +64,7 @@ KEYWORDS = [
     "bike or bus lane",
     "over posted limit",
     "double parking",
-    "No Parking"
+    "no parking"
 ]
 
 # ---- Helpers ----
@@ -74,6 +79,23 @@ def load_int(path, default=0):
 def save_int(path, val):
     with open(path, "w") as f:
         f.write(str(val))
+
+def load_str(path, default=""):
+    if os.path.exists(path):
+        return open(path).read().strip()
+    return default
+
+def save_str(path, val):
+    with open(path, "w") as f:
+        f.write(str(val))
+
+def parse_date(s):
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except Exception:
+        return None
 
 def load_seen():
     if not os.path.exists(SEEN_FILE):
@@ -157,20 +179,25 @@ def write_rows(rows):
 # ---- Main ----
 def main():
     current_vid = load_int(STATE_VID, START_VID)
+    last_date_str = load_str(STATE_DATE, "")
+    last_date = parse_date(last_date_str)
     last_valid_vid = load_int(STATE_VALID, START_VID)
-    consecutive_gaps = load_int(STATE_GAP, 0)
     pass_count = load_int(STATE_PASS, 0)
+    consecutive_gaps = load_int(STATE_GAP, 0)
     seen = load_seen()
 
     end_vid = current_vid + CHUNK_SIZE
     collected = []
-    restart_count = 0
+    newest_date = last_date
+    newest_vid = None
     count_403 = 0
+    restart_count = 0
 
-    print(f"Scanning {current_vid} → {end_vid-1}, last_valid_vid={last_valid_vid}, seen={len(seen)}, pass={pass_count}")
+    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} → {end_vid-1}, last_date={last_date_str}, last_valid_vid={last_valid_vid}, seen={len(seen)}")
 
     while current_vid < end_vid:
         status, payload = fetch_search(current_vid)
+
         if status == "ok":
             data = payload.get("data") if isinstance(payload, dict) else None
             if not data:
@@ -178,12 +205,16 @@ def main():
             else:
                 consecutive_gaps = 0
                 top = data[0]
+                dt = parse_date(top.get("date_utc") or top.get("date"))
                 if passes_filters(top) and str(current_vid) not in seen:
                     row = extract_row(current_vid, top)
                     collected.append(row)
                     seen.add(str(current_vid))
-                    last_valid_vid = current_vid  # update anchor
+                    last_valid_vid = current_vid
                     print(f"[KEEP] {current_vid} {row['address']} {row['description']}")
+                    if dt and (newest_date is None or dt > newest_date):
+                        newest_date = dt
+                        newest_vid = current_vid
 
             polite_sleep()
             current_vid += 1
@@ -204,15 +235,21 @@ def main():
                     break
             current_vid += 1
         else:
-            count_403 = 0
             current_vid += 1
 
-        # rollback if gaps too large
         if consecutive_gaps >= GAP_THRESHOLD:
             restart_count += 1
-            print(f"[!] Hit {GAP_THRESHOLD} gaps, rolling back to {last_valid_vid}")
+            print(f"[!] Hit {GAP_THRESHOLD} gaps")
             consecutive_gaps = 0
-            current_vid = last_valid_vid
+            if last_valid_vid:
+                current_vid = last_valid_vid
+                print(f"Rolling back to last_valid_vid={last_valid_vid}")
+            elif newest_vid:
+                current_vid = newest_vid
+                print(f"Rolling back to newest_vid={newest_vid}")
+            else:
+                current_vid = START_VID
+                print(f"Rolling back to START_VID={START_VID}")
             if MAX_RESTARTS and restart_count >= MAX_RESTARTS:
                 break
 
@@ -227,20 +264,27 @@ def main():
     save_int(STATE_VALID, last_valid_vid)
     save_int(STATE_GAP, consecutive_gaps)
 
-    # pass accounting
+    # Pass management
     pass_count += 1
-    if pass_count < PASS_LIMIT:
-        save_int(STATE_PASS, pass_count)
-        save_int(STATE_VID, last_valid_vid)  # rescan around valid anchor
-        print(f"Pass {pass_count}/{PASS_LIMIT} complete, staying near VID={last_valid_vid}")
-    else:
+    if pass_count >= PASS_LIMIT:
+        if newest_date and (last_date is None or newest_date > last_date):
+            save_str(STATE_DATE, newest_date.isoformat())
+            if newest_vid:
+                save_int(STATE_VID, newest_vid)
+                print(f"Updated last_date → {newest_date.isoformat()}, advancing to newest_vid={newest_vid}")
+            else:
+                save_int(STATE_VID, end_vid + FORWARD_BUFFER)
+                print(f"Updated last_date → {newest_date.isoformat()}, probing forward to {end_vid + FORWARD_BUFFER}")
+        else:
+            save_int(STATE_VID, end_vid + FORWARD_BUFFER)
+            print(f"No newer dates, probing forward to {end_vid + FORWARD_BUFFER}")
         save_int(STATE_PASS, 0)
-        save_int(STATE_VID, end_vid)  # advance after full passes
-        print(f"Completed {PASS_LIMIT} passes, advancing to VID={end_vid}")
+    else:
+        save_int(STATE_VID, load_int(STATE_VID, START_VID))
+        save_int(STATE_PASS, pass_count)
+        print(f"Repeating pass {pass_count}/{PASS_LIMIT} around VID={load_int(STATE_VID, START_VID)}")
 
-    print(f"Done. consecutive_gaps={consecutive_gaps}, next start={load_int(STATE_VID)}, last_valid_vid={last_valid_vid}")
+    print(f"Done. consecutive_gaps={consecutive_gaps}, next start={load_int(STATE_VID)}, last_valid_vid={last_valid_vid}, last_date={load_str(STATE_DATE)}")
 
 if __name__ == "__main__":
     main()
-
-
