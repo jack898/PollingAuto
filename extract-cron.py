@@ -203,10 +203,10 @@ def main():
             if not data:
                 consecutive_gaps += 1
             else:
-                consecutive_gaps = 0
                 top = data[0]
                 dt = parse_date(top.get("date_utc") or top.get("date"))
                 if passes_filters(top) and str(current_vid) not in seen:
+                    consecutive_gaps = 0
                     row = extract_row(current_vid, top)
                     collected.append(row)
                     seen.add(str(current_vid))
@@ -215,6 +215,8 @@ def main():
                     if dt and (newest_date is None or dt > newest_date):
                         newest_date = dt
                         newest_vid = current_vid
+                else:
+                  consecutive_gaps += 1
 
             polite_sleep()
             current_vid += 1
@@ -288,5 +290,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
