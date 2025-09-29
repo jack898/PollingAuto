@@ -42,6 +42,6 @@ jobs:
           git pull origin main --strategy-option=theirs
 
           # Stage changes
-          git add filtered_boston_tickets.csv last_vid.txt last_valid_vid.txt pass_count.txt gap_count.txt seen_vids.txt
+          git add filtered_boston_tickets.csv last_vid.txt last_date.txt last_valid_vid.txt pass_count.txt gap_count.txt seen_vids.txt
           git commit -m "Update tickets data [skip ci]" || echo "No changes"
           git push origin main
