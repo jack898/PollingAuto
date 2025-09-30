@@ -46,12 +46,26 @@ I tried a lot of different tricks and ideas here by making a Python scraping scr
 My first approach was a simple scraper that iterated the violation numbers, and if it went 15000 numbers without getting a ticket, it would roll back to the starting violation number. This worked at first, but /searchviolation endpoint is not super fast to respond, plus I have to do some JSON parsing, so it wasn't practical to re-scan 15000 tickets repeatedly. 
 I couldn't have each job take 30+ minutes.
 
-### Rollback + smaller scans + date tracking
+### Rollback + smaller scans
 A better approach involved a little bit more accounting:
 1. Scan only 1000 tickets on each job (down from 20k), to reduce runtime
 2. Instead of using the starting violation number, we keep track of the largest violation number. We revert to THAT violation number if we go 10000 tickets with no findings, and we also start our next job from this number.
 3. Rescan each range multiple times to find clusters
 4. We track the violation numbers seen to deduplicate before putting tickets in the CSV
+
+### + Date tracking
+One issue with tracking the largest violation number is that the tickets are not always chronological--with that, I tried tracking the latest date instead. This worked a little bit better!
+
+### Final Approach
+We keep a few txt files to persist data across jobs. "VID" here refers to violation number:
+- `last_vid.txt`: Current scanning position (which VID to start from next)
+- `last_valid_vid.txt`: The VID of the most recent valid ticket 
+   `last_date.txt`: Date of the most recent ticket found
+- `pass_count.txt`: How many times the current range has been scanned (0-2)
+- `gap_count.txt`: Counter for consecutive empty responses (resets at 10000)
+- `seen_vids.txt`: All VIDs already processed, to avoid duplicate entries
+
+The overall strategy is; we scan 1000 VIDs, from `last_vid` to `last_vid+1000`. We scan each range 3 times before advancing 3000 tickets forward if nothing is found. If we find a newer ticket, this becomes our next starting point. If we get through 10,000 consecutive VIDs with no tickets found, we assume we've gone too far and revert to `last_valid_vid`.
 
 I ran this approach for about a week and it stayed "good enough". Admittedly, it sometimes struggles to catch up during off times when IDs jumped quickly, but it usually found tickets issued within a few hours, and often many within the past hour during the day.
 
