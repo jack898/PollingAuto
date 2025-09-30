@@ -46,7 +46,6 @@ START_VID = 831394104
 CHUNK_SIZE = 1000
 PASS_LIMIT = 3
 GAP_THRESHOLD = 10000
-FORWARD_BUFFER = 200
 MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
 
@@ -280,11 +279,11 @@ def main():
                 save_int(STATE_VID, newest_vid)
                 print(f"Updated last_date → {newest_date.isoformat()}, advancing to newest_vid={newest_vid}")
             else:
-                save_int(STATE_VID, end_vid + FORWARD_BUFFER)
-                print(f"Updated last_date → {newest_date.isoformat()}, probing forward to {end_vid + FORWARD_BUFFER}")
+                save_int(STATE_VID, end_vid)
+                print(f"Updated last_date → {newest_date.isoformat()}, probing forward to {end_vid}")
         else:
-            save_int(STATE_VID, end_vid + FORWARD_BUFFER)
-            print(f"No newer dates, probing forward to {end_vid + FORWARD_BUFFER}")
+            save_int(STATE_VID, end_vid)
+            print(f"No newer dates, probing forward to {end_vid}")
         save_int(STATE_PASS, 0)
     else:
         save_int(STATE_VID, load_int(STATE_VID, START_VID))
@@ -295,6 +294,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
