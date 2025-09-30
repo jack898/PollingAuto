@@ -252,10 +252,9 @@ def main():
             else:
                 current_vid = START_VID
                 print(f"Rolling back to START_VID={START_VID}")
-            if MAX_RESTARTS and restart_count >= MAX_RESTARTS:
-                break
             save_seen(seen)
             save_int(STATE_VID, current_vid)
+            save_int(STATE_PASS, 0)
             save_int(STATE_GAP, consecutive_gaps)
             return
 
@@ -294,6 +293,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
