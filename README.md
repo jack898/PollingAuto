@@ -83,7 +83,7 @@ I (and Bolt) built an interactive map interface to view Boston parking tickets i
 Just a couple interesting observations I've had so far:
 1. They ticket all night! I assumed "overnight" tickets came from early morning/night patrols, but I saw tickets regularly issued from 1-4am.
 2. Also contrary to popular belief, they ticket on Sundays! I originally designed the site to not even show Sundays, but I tested it and saw quite a few Expired Inspection/Registration Plate tickets, and even a few "Resident Permit Only" tickets.
-3. Overall, "Resident Permit Only" violations dominate, but sidewalk/fire hydrant/driveway blocking violations are pretty common too.
+3. Overall, "Meter Fee Unpaid" and "Resident Permit Only" violations dominate, but sidewalk/fire hydrant/driveway blocking violations are pretty common too.
 
 # Disclaimer
 I am not a lawyer, data scientist, or expert software engineer. There is probably (definitely) a better approach for everything I did, and I encourage anybody to improve upon it.
