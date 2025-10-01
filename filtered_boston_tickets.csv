@@ -2648,3 +2648,7 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831537929,2025-10-01 14:30:40,"511 BEACON ST, Boston, MA",216906,ILLE51,332 Meter Fee Unpaid
 831537930,2025-10-01 14:33:51,"499 BEACON ST, Boston, MA",216906,W61945,335 $55 Double Parking
 831538494,2025-10-01 14:57:11,"11 EXETER ST, Boston, MA",216906,8ZX549,323 No Valid / Expired Inspection
+831538498,2025-10-01 15:05:37,"5 EXETER ST, Boston, MA",216906,9AG528,332 Meter Fee Unpaid
+831538502,2025-10-01 15:10:34,"290 BEACON ST, Boston, MA",216906,164I,322 No Valid/Expired Registration Plate
+831538503,2025-10-01 15:10:34,"290 BEACON ST, Boston, MA",216906,164I,322 No Valid/Expired Registration Plate
+831538504,2025-10-01 15:12:14,"300 BEACON ST, Boston, MA",216906,4SST97,323 No Valid / Expired Inspection
