@@ -2838,3 +2838,7 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831547229,2025-10-01 22:27:34,"115 L ST, Boston, MA",216906,2MEC29,322 No Valid/Expired Registration Plate
 831547370,2025-10-01 22:17:50,"1216 COMMONWEALTH AVE, Boston, MA",216906,5KCG48,323 No Valid / Expired Inspection
 831547371,2025-10-01 22:28:24,"152 HARVARD AVE, Boston, MA",216906,4JPK24,323 No Valid / Expired Inspection
+831547372,2025-10-01 22:31:40,"182 HARVARD AVE, Boston, MA",216906,4DCP77,322 No Valid/Expired Registration Plate
+831547857,2025-10-01 19:51:48,"X149 MAGNOLIA ST, Boston, MA",216906,4MKP27,322 No Valid/Expired Registration Plate
+831547959,2025-10-01 00:13:15,"285 TREMONT ST, Boston, MA",216906,41CD67,330 $90 No Parking (Zone A)
+831547982,2025-10-01 00:13:04,"285 TREMONT ST, Boston, MA",216906,6FY529,330 $90 No Parking (Zone A)
