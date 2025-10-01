@@ -44,7 +44,7 @@ SEEN_FILE = "seen_vids.txt"
 # Parameters
 START_VID = 831394104
 CHUNK_SIZE = 1000
-PASS_LIMIT = 3
+PASS_LIMIT = 2
 GAP_THRESHOLD = 10000
 MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
@@ -294,6 +294,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
