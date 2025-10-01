@@ -80,10 +80,11 @@ Still, I concluded that if you have a basic understanding of fundamentals, and a
 # Results
 I (and Bolt) built an interactive map interface to view Boston parking tickets in somewhat real time. In addition, I have gathered a LOT of data on Boston parking tickets.
 
-Just a couple interesting observations I've had so far:
+Just a couple observations I've had so far:
 1. They ticket all night! I assumed "overnight" tickets came from early morning/night patrols, but I saw tickets regularly issued from 1-4am.
 2. Also contrary to popular belief, they ticket on Sundays! I originally designed the site to not even show Sundays, but I tested it and saw quite a few Expired Inspection/Registration Plate tickets, and even a few "Resident Permit Only" tickets.
 3. Overall, "Meter Fee Unpaid" and "Resident Permit Only" violations dominate, except on Sundays when the Expired Inspection or Expired Registration plate tickets are more common.
+4. Perhaps unsurprisingly, Back Bay has the most tickets by far, especially Newbury and Boylston St and surrounding alleys/streets. But on other days, it almost looks like certain neighborhoods are "targeted"--for instance one day a lot of tickets will be in the East Boston area, then South Boston the next day.
 
 # Disclaimer
 I am not a lawyer, data scientist, or expert software engineer. There is probably (definitely) a better approach for everything I did, and I encourage anybody to improve upon it.
