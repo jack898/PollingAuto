@@ -3510,3 +3510,7 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831563399,2025-10-02 13:17:29,"118 MEDFORD ST, Boston, MA",216906,4XSF77,376 $90 Street Cleaning (Charlestown)
 831563404,2025-10-02 13:32:24,"84 MONUMENT ST, Boston, MA",216906,5JKP97,376 $90 Street Cleaning (Charlestown)
 831564165,2025-10-02 14:06:31,"x21 FAIRFIELD ST, Boston, MA",216906,1XBA77,323 No Valid / Expired Inspection
+831564166,2025-10-02 14:08:44,"16 FAIRFIELD ST, Boston, MA",216906,Y27056,332 Meter Fee Unpaid
+831564470,2025-10-02 13:23:38,"54 MOUNT VERNON ST, Boston, MA",216906,319C70,323 No Valid / Expired Inspection
+831564906,2025-10-02 13:50:49,"71 MARINE RD, Boston, MA",216906,LLL9600,334 $60 Resident Permit Only
+831564907,2025-10-02 13:51:52,"71 MARINE RD, Boston, MA",216906,2SYK49,322 No Valid/Expired Registration Plate
