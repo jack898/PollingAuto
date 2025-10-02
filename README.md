@@ -1,6 +1,8 @@
 # BosTix: The background
+**If you're just interested in getting the raw data, scroll down to _Accessing the Data_**
+
 One night, I was scrolling on X and saw this super cool [real-time parking ticket map](https://walzr.com/sf-parking/about/) for San Francisco, built by Riley Walz. Immediately, I knew I had to do the same thing for Boston; after all, ticketing is just as pervasive and notorious here. 
-That said, my goal was (seemingly) simple: find a way to retrieve tickets chronologically.
+That said, my goal was (seemingly) straightforward: find a way to retrieve tickets chronologically.
 
 I quickly found the official [payment portal for tickets](https://bostonma.rmcpay.com/). This portal lets you to search by ticket number, plate number, or VIN--problem is, I don't have any tickets! Lucky for me, the plate `123456` had a few. I poked around with the site's features and found a few interesting API endpoints. 
 
@@ -60,14 +62,14 @@ One issue with tracking the largest violation number is that the tickets are not
 We keep a few txt files to persist data across jobs. "VID" here refers to violation number:
 - `last_vid.txt`: Current scanning position (which VID to start from next)
 - `last_valid_vid.txt`: The VID of the most recent valid ticket 
-   `last_date.txt`: Date of the most recent ticket found
+- `last_date.txt`: Date of the most recent ticket found
 - `pass_count.txt`: How many times the current range has been scanned (0-2)
 - `gap_count.txt`: Counter for consecutive empty responses (resets at 10000)
 - `seen_vids.txt`: All VIDs already processed, to avoid duplicate entries
 
-The overall strategy is; we scan 1000 VIDs, from `last_vid` to `last_vid+1000`. We scan each range 3 times before advancing 3000 tickets forward if nothing is found. If we find a newer ticket, this becomes our next starting point. If we get through 10,000 consecutive VIDs with no tickets found, we assume we've gone too far and revert to `last_valid_vid`.
+The overall strategy is; we scan 1000 VIDs, from `last_vid` to `last_vid+1000`. We scan each range 2 times before advancing forward to the end of that range if nothing is found. If we find a newer ticket, this becomes our next starting point. If we get through 10,000 consecutive VIDs with no tickets found, we assume we've gone too far and revert to `last_valid_vid`.
 
-I ran this approach for about a week and it stayed "good enough". Admittedly, it sometimes struggles to catch up during off times when IDs jumped quickly, but it usually found tickets issued within a few hours, and often many within the past hour during the day.
+I ran this approach for about a week and it stayed "good enough". Admittedly, it sometimes struggles to catch up during off times when IDs jump quickly, but it usually finds tickets issued within a few hours, and often many within the past hour during the day.
 
 ## Website
 I wanted a sleek UI like Riley's, but frontend development is not my strength. This is where AI came in handy! I used Bolt to build the UI and set up edge functions to keep the site updated.
@@ -78,13 +80,16 @@ Building with AI taught me some lessons:
 Still, I concluded that if you have a basic understanding of fundamentals, and access to a strong LLM, you can build pretty impressive projects quickly!
 
 # Results
-I (and Bolt) built an interactive map interface to view Boston parking tickets in somewhat real time. In addition, I have gathered a LOT of data on Boston parking tickets.
+I (and Bolt) built an interactive map interface to view Boston parking tickets in somewhat real time. In addition, I have gathered a LOT of data on Boston parking tickets. In the process, I learned a lot about Supabase edge functions, GitHub Actions, and data scraping in general.
 
 Just a couple observations I've had so far:
 1. They ticket all night! I assumed "overnight" tickets came from early morning/night patrols, but I saw tickets regularly issued from 1-4am.
-2. Also contrary to popular belief, they ticket on Sundays! I originally designed the site to not even show Sundays, but I tested it and saw quite a few Expired Inspection/Registration Plate tickets, and even a few "Resident Permit Only" tickets.
-3. Overall, "Meter Fee Unpaid" and "Resident Permit Only" violations dominate, except on Sundays when the Expired Inspection or Expired Registration plate tickets are more common.
+2. Contrary to popular belief, they ticket on Sundays! I originally designed the site to not even show Sundays, but I tested it and saw quite a few Expired Inspection/Registration Plate tickets, and even a few "Resident Permit Only" tickets.
+3. Overall, "Meter Fee Unpaid" and "Resident Permit Only" violations dominate, except on Sundays when the Expired Inspection or Expired Registration Plate tickets are more common.
 4. Perhaps unsurprisingly, Back Bay has the most tickets by far, especially Newbury and Boylston St and surrounding alleys/streets. But on other days, it almost looks like certain neighborhoods are "targeted"--for instance one day a lot of tickets will be in the East Boston area, then South Boston the next day.
+
+# Accessing the Data
+For now, all of my scraped ticket data lives in `filtered_boston_tickets.csv` In the format of violation_number, date in UTC,	address,	zonenumber (unused field, just had it during debugging and took too much effort to remove now), license plate number, and violation description. Since I'm scraping well over 100 tickets per day, this document is very large and eventually I might "reset" it and move the current records to a historical folder. 
 
 # Disclaimer
 I am not a lawyer, data scientist, or expert software engineer. There is probably (definitely) a better approach for everything I did, and I encourage anybody to improve upon it.
