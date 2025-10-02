@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """
-Boston parking ticket scraper (hybrid date + valid VID).
+Boston Parking Ticket Scraper
 
-Features:
-- Scans CHUNK_SIZE VIDs per run.
-- Tracks both last_date (latest kept ticket date) and last_valid_vid (most recent kept Boston ticket VID).
-- Repeats each range PASS_LIMIT times before advancing.
-- If gaps exceed GAP_THRESHOLD, rollback to last_valid_vid (preferred) or newest_vid.
-- If tickets found with a newer date, advance cursor; otherwise probe forward cautiously.
-- Persists state across runs (last_vid, last_date, last_valid_vid, pass_count, gap_count, seen_vids).
-- Deduplicates tickets persistently via seen_vids.txt.
-- Quits early if 5 consecutive 403s.
+- Scans CHUNK_SIZE VIDs per run. Tracks latest kept ticket date and most recent valid VID.
+- Repeats each range PASS_LIMIT times before advancing to end of range.
+- If gaps exceed GAP_THRESHOLD, rollback to most recent valid VID.
+- If ticket found with a newer date, advance to that VID.
+- Deduplicates tickets via seen_vids.txt.
+- End scrape early if 5 consecutive 403s.
 """
 
 import requests
@@ -20,7 +17,7 @@ import random
 import os
 from datetime import datetime
 
-# ---- Configuration ----
+# API Config 
 BASE_HOST = "bostonma.rmcpay.com"
 SEARCH_PATH = "/rmcapi/api/violation_index.php/searchviolation"
 QS_TEMPLATE = ("operatorid=1582&violationnumber={vid}&stateid=&lpn=&vin=&plate_type_id="
@@ -31,7 +28,6 @@ HEADERS = {
     "Accept": "application/json, text/javascript, */*; q=0.01",
     "Referer": f"https://{BASE_HOST}/",
 }
-COOKIES = {}
 
 # State files
 STATE_VID = "last_vid.txt"
@@ -46,11 +42,11 @@ START_VID = 831394104
 CHUNK_SIZE = 1000
 PASS_LIMIT = 2
 GAP_THRESHOLD = 10000
-MAX_RESTARTS = 1
 REQUEST_DELAY = 0.001  # 1 ms
 
 CSV_OUT = "filtered_boston_tickets.csv"
 
+# Violation types that we accept as valid tickets--not taking "tow fee" or others that do not specify an address
 KEYWORDS = [
     "resident permit only",
     "no stopping or standing",
@@ -68,7 +64,7 @@ KEYWORDS = [
     "street cleaning"
 ]
 
-# ---- Helpers ----
+# Helpers to load/save state files and handle dates
 def load_int(path, default=0):
     if os.path.exists(path):
         try:
@@ -109,7 +105,7 @@ def save_seen(seen):
         for vid in sorted(seen, key=int):
             f.write(str(vid) + "\n")
 
-# ---- HTTP ----
+# HTTP Helper Functions
 def polite_sleep():
     time.sleep(REQUEST_DELAY)
 
@@ -118,7 +114,7 @@ def build_url(vid):
 
 def fetch_search(vid):
     try:
-        resp = requests.get(build_url(vid), headers=HEADERS, cookies=COOKIES, timeout=12)
+        resp = requests.get(build_url(vid), headers=HEADERS, timeout=12)
     except Exception as e:
         return ("err", str(e))
 
@@ -137,14 +133,15 @@ def fetch_search(vid):
         return ("err", "invalid-json")
     return ("ok", j)
 
-# ---- Filters ----
+# Filter--checks that ticket has a non-NULL address in user defined fields
 def passes_filters(top):
     if top.get("userdef1_label") != "Location":
         return False
     if top.get("userdef8_label") != "Street Number":
         return False
-    u1 = top.get("userdef1")
-    u8 = top.get("userdef8")
+      
+    u1 = top.get("userdef1") # Street Name
+    u8 = top.get("userdef8") # Street Number
     if not u1 or str(u1).strip().lower() in ("", "null"):
         return False
     if not u8 or str(u8).strip().lower() in ("", "null"):
@@ -152,6 +149,7 @@ def passes_filters(top):
     desc = str(top.get("description") or "").lower()
     return any(kw in desc for kw in KEYWORDS)
 
+# Extracts address and adds Boston ending to it, for geocoding. Extracts other ticket details too.
 def extract_row(vid, top):
     num = str(top.get("userdef8", "")).strip()
     name = str(top.get("userdef1", "")).strip()
@@ -167,6 +165,7 @@ def extract_row(vid, top):
         "description": top.get("description", ""),
     }
 
+# Writes to CSV
 def write_rows(rows):
     header = ["violation_number","date_utc","address","zonenumber","lpn","description"]
     need_header = not os.path.exists(CSV_OUT)
@@ -177,8 +176,9 @@ def write_rows(rows):
         for r in rows:
             w.writerow(r)
 
-# ---- Main ----
+# Main scraping loop
 def main():
+    # Retrieving states from state files
     current_vid = load_int(STATE_VID, START_VID)
     last_date_str = load_str(STATE_DATE, "")
     last_date = parse_date(last_date_str)
@@ -192,18 +192,18 @@ def main():
     newest_date = last_date
     newest_vid = None
     count_403 = 0
-    restart_count = 0
 
-    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} → {end_vid-1}, last_date={last_date_str}, last_valid_vid={last_valid_vid}, seen={len(seen)}")
+    print(f"Pass {pass_count+1}/{PASS_LIMIT}: scanning {current_vid} to {end_vid-1}, last_date={last_date_str}, last_valid_vid={last_valid_vid}, seen={len(seen)}")
 
     while current_vid < end_vid:
         status, payload = fetch_search(current_vid)
 
-        if status == "ok":
+        
+        if status == "ok": # Ticket lookup suceeded
             data = payload.get("data") if isinstance(payload, dict) else None
             if not data:
                 consecutive_gaps += 1
-            else:
+            else: # Filter invalid tickets, parse valid tickets.
                 top = data[0]
                 dt = parse_date(top.get("date_utc") or top.get("date"))
                 if passes_filters(top) and str(current_vid) not in seen:
@@ -216,18 +216,18 @@ def main():
                     if dt and (newest_date is None or dt > newest_date):
                         newest_date = dt
                         newest_vid = current_vid
-                else:
+                else: # If fails filter, add to gap
                   consecutive_gaps += 1
 
-            polite_sleep()
+            polite_sleep() # 1ms delay to avoid rate limiting
             current_vid += 1
 
-        elif status == "404":
+        elif status == "404": 
             consecutive_gaps += 1
             polite_sleep()
             current_vid += 1
 
-        elif status in ("403","429"):
+        elif status in ("403","429"): # Throttle scraper if 403/429 received
             wait = 1 + random.random()*2
             print(f"[!] {status} backing off {wait:.1f}s")
             time.sleep(wait)
@@ -240,26 +240,27 @@ def main():
         else:
             current_vid += 1
 
-        if consecutive_gaps >= GAP_THRESHOLD:
-            restart_count += 1
+        if consecutive_gaps >= GAP_THRESHOLD: # If we hit 10,000 gaps
             print(f"[!] Hit {GAP_THRESHOLD} gaps")
             consecutive_gaps = 0
             if last_valid_vid:
                 current_vid = last_valid_vid
                 print(f"Rolling back to last_valid_vid={last_valid_vid}")
-            elif newest_vid:
+            elif newest_vid: # If newer VID found during current scraping, go to it
                 current_vid = newest_vid
                 print(f"Rolling back to newest_vid={newest_vid}")
             else:
                 current_vid = START_VID
                 print(f"Rolling back to START_VID={START_VID}")
+
+            # Save current state and end this scraping job
             save_seen(seen)
             save_int(STATE_VID, current_vid)
             save_int(STATE_PASS, 0)
             save_int(STATE_GAP, consecutive_gaps)
-            return
+            return 
 
-        if len(collected) >= 10:
+        if len(collected) >= 10: # Write and reset array if lots of tickets found
             write_rows(collected)
             collected = []
 
@@ -273,14 +274,14 @@ def main():
     # Pass management
     pass_count += 1
     if pass_count >= PASS_LIMIT:
-        if newest_date and (last_date is None or newest_date > last_date):
+        if newest_date and (last_date is None or newest_date > last_date): # If newer ticket found based on date, advance to this VID
             save_str(STATE_DATE, newest_date.isoformat())
             if newest_vid:
                 save_int(STATE_VID, newest_vid)
-                print(f"Updated last_date → {newest_date.isoformat()}, advancing to newest_vid={newest_vid}")
+                print(f"Updated last_date: {newest_date.isoformat()}, advancing to newest_vid={newest_vid}")
             else:
                 save_int(STATE_VID, end_vid)
-                print(f"Updated last_date → {newest_date.isoformat()}, probing forward to {end_vid}")
+                print(f"Updated last_date: {newest_date.isoformat()}, probing forward to {end_vid}")
         else:
             save_int(STATE_VID, end_vid)
             print(f"No newer dates, probing forward to {end_vid}")
@@ -294,6 +295,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
