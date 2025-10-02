@@ -82,14 +82,24 @@ Still, I concluded that if you have a basic understanding of fundamentals, and a
 # Results
 I (and Bolt) built an interactive map interface to view Boston parking tickets in somewhat real time. In addition, I have gathered a LOT of data on Boston parking tickets. In the process, I learned a lot about Supabase edge functions, GitHub Actions, and data scraping in general.
 
-Just a couple observations I've had so far:
+Just a few observations I've had so far:
 1. They ticket all night! I assumed "overnight" tickets came from early morning/night patrols, but I saw tickets regularly issued from 1-4am.
 2. Contrary to popular belief, they ticket on Sundays! I originally designed the site to not even show Sundays, but I tested it and saw quite a few Expired Inspection/Registration Plate tickets, and even a few "Resident Permit Only" tickets.
 3. Overall, "Meter Fee Unpaid" and "Resident Permit Only" violations dominate, except on Sundays when the Expired Inspection or Expired Registration Plate tickets are more common.
 4. Perhaps unsurprisingly, Back Bay has the most tickets by far, especially Newbury and Boylston St and surrounding alleys/streets. But on other days, it almost looks like certain neighborhoods are "targeted"--for instance one day a lot of tickets will be in the East Boston area, then South Boston the next day.
 
+### Q&A
+**Could this show tickets in other nearby areas like Cambridge, Somerville, etc.?** Unfortunately every town uses their own parking ticket system, so adapting this to a new town (Cambridge, Somerville, etc.) would require weeks of reverse engineering and redesigning the logic. Maybe one day when I'm not in school I can adapt it to a few more places!
+
+**What types of tickets are tracked/not tracked?** I've had to manually determine the violation types, but currently I track quite a few--click the Info button on the website's sidebar, and scroll down to the key to see all types tracked right now. The only ones I do not track are those which do not have addresses associated, such as "Tow Fee" and "Seizure Fee".
+
+**When does the site ticket data go back to?** The site currently only goes back to the evening of 9/25 because that's when I got the frontend and backend successfully integrated. The CSV shows tickets from 9/24 as well. 
+
+**Do you plan to add _X_?** I'd love your feedback! I know there are a lot of cool possibilites for features to add. Unfortunately I'm super busy with school right now, but around December I should have more time to make revisions/additions.
+
 # Accessing the Data
-For now, all of my scraped ticket data lives in `filtered_boston_tickets.csv` In the format of violation_number, date in UTC,	address,	zonenumber (unused field, just had it during debugging and took too much effort to remove now), license plate number, and violation description. Since I'm scraping well over 100 tickets per day, this document is very large and eventually I might "reset" it and move the current records to a historical folder. 
+For now, all of my scraped ticket data lives in `filtered_boston_tickets.csv` In the format of violation_number, date in UTC,	address,	zonenumber (unused field, just had it during debugging and would take too much effort to remove now), license plate number, and violation description. Since I'm scraping well over 100 tickets per day, this document is very large and eventually I might "reset" it and move the current records to a historical folder. 
+
 
 # Disclaimer
 I am not a lawyer, data scientist, or expert software engineer. There is probably (definitely) a better approach for everything I did, and I encourage anybody to improve upon it.
