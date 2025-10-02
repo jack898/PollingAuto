@@ -3950,3 +3950,6 @@ violation_number,date_utc,address,zonenumber,lpn,description
 831578419,2025-10-02 23:03:37,"73 WALNUT PARK, Boston, MA",216906,5GRC41,323 No Valid / Expired Inspection
 831578420,2025-10-02 23:11:52,"451 WALNUT AVE, Boston, MA",216906,9JV187,323 No Valid / Expired Inspection
 831578421,2025-10-02 23:17:49,"85 GLEN RD, Boston, MA",216906,2ASD84,323 No Valid / Expired Inspection
+831577515,2025-10-02 23:10:44,"25 DRYDOCK AVE, Boston, MA",216906,4MCL65,332 Meter Fee Unpaid
+831577885,2025-10-02 23:15:19,"154 HARVARD AVE, Boston, MA",216906,8ZN822,323 No Valid / Expired Inspection
+831578424,2025-10-02 23:33:05,"32 ROCKVALE CIR, Boston, MA",216906,6HML37,323 No Valid / Expired Inspection
