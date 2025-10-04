@@ -6,7 +6,7 @@ concurrency:
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # every 10 minutes
+    - cron: "*/20 * * * *"   # every 10 minutes
   workflow_dispatch:
 
 permissions:
