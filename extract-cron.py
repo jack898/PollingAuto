@@ -42,7 +42,7 @@ START_VID = 831394104
 CHUNK_SIZE = 1000
 PASS_LIMIT = 2
 GAP_THRESHOLD = 10000
-REQUEST_DELAY = 0.001  # 1 ms
+REQUEST_DELAY = 7500  # 1 ms
 
 CSV_OUT = "filtered_boston_tickets.csv"
 
@@ -295,6 +295,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
